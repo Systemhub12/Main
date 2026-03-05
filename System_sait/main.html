@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>BlueBox • Платформа System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #6c5ce7; --secondary: #00cec9; --accent: #fd79a8;
+            --dark: #0a0a1a; --darker: #05050f; --light: #f8f9ff;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--darker);
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* ✨ Фон */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background:
+                    radial-gradient(ellipse at 20% 80%, rgba(108, 92, 231, 0.15) 0%, transparent 50%),
+                    radial-gradient(ellipse at 80% 20%, rgba(0, 206, 201, 0.12) 0%, transparent 50%),
+                    radial-gradient(ellipse at 50% 50%, rgba(253, 121, 168, 0.08) 0%, transparent 70%);
+            z-index: -2;
+            animation: pulseBg 15s ease-in-out infinite;
+        }
+
+        @keyframes pulseBg {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.05); }
+        }
+
+        /* ✨ Звёзды */
+        .stars {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle var(3s) ease-in-out infinite var(0s);
+            opacity: var(0.8);
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: var(0.8); transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* 🎬 Прелоадер — теперь с правильным z-index */
+        #preloader {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: var(--dark);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999; /* 🔥 Выше всего */
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        #preloader.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .logo-container {
+            text-align: center;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 4.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--secondary), var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(108, 92, 231, 0.6);
+            letter-spacing: 3px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(108, 92, 231, 0.6); }
+            to { text-shadow: 0 0 40px rgba(0, 206, 201, 0.9), 0 0 60px rgba(253, 121, 168, 0.7); }
+        }
+        .logo-subtitle {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.7);
+            letter-spacing: 2px;
+            animation: fadeInUp 1s ease 0.5s both;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 🌊 Волна перехода — ИСПРАВЛЕНА */
+        .wave-transition {
+            position: fixed;
+            bottom: 0; left: 0;
+            width: 100%; height: 100vh;
+            background: var(--dark);
+            clip-path: circle(0% at 50% 100%);
+            transition: clip-path 1s cubic-bezier(0.77, 0, 0.175, 1);
+            z-index: 9998; /* 🔥 Чуть ниже прелоадера */
+            pointer-events: none;
+        }
+        .wave-transition.active {
+            clip-path: circle(180% at 50% 100%); /* 🔥 Увеличено для полного раскрытия */
+        }
+        /* 🔥 После завершения — скрываем волну полностью */
+        .wave-transition.done {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 📦 Основной контент — ИСПРАВЛЕНО */
+        #main-content {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10; /* 🔥 Выше волны */
+        }
+        #main-content.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 🎯 Хедер */
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeInDown 1s ease both;
+        }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        header h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--light), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        header p {
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.85);
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        header a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition);
+            position: relative;
+            display: inline-block;
+        }
+        header a::after {
+            content: '';
+            position: absolute;
+            bottom: -3px; left: 0;
+            width: 0; height: 2px;
+            background: var(--accent);
+            transition: var(--transition);
+        }
+        header a:hover::after { width: 100%; }
+
+        /* 🗂️ Секции */
+        .section {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px;
+            margin: 30px 0;
+            backdrop-filter: blur(12px);
+            box-shadow: var(--shadow);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .section h2 {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .section h2::before { content: '🎮'; font-size: 1.4rem; }
+        .section:nth-child(2) h2::before { content: '💻'; }
+
+        /* 🔘 Кнопки */
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .download-btn {
+            position: relative;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, rgba(108, 92, 231, 0.2), rgba(0, 206, 201, 0.2));
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            color: var(--light);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            overflow: hidden;
+            backdrop-filter: blur(8px);
+        }
+        .download-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.6s ease;
+        }
+        .download-btn:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: var(--secondary);
+            box-shadow: 0 12px 40px rgba(0, 206, 201, 0.3);
+            background: linear-gradient(135deg, rgba(108, 92, 231, 0.35), rgba(0, 206, 201, 0.35));
+        }
+        .download-btn:hover::before { left: 100%; }
+        .download-btn:active { transform: translateY(-1px) scale(0.99); }
+        .download-btn.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: rgba(255,255,255,0.05);
+        }
+        .download-btn.disabled:hover { transform: none; box-shadow: none; }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--accent);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(253, 121, 168, 0.6); }
+            50% { box-shadow: 0 0 0 10px rgba(253, 121, 168, 0); }
+        }
+
+        /* 🤖 AI */
+        #ai-assistant {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 340px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow);
+            z-index: 100;
+            opacity: 0;
+            transform: translateX(50px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        #ai-assistant.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .ai-avatar {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-family: 'Orbitron', monospace;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        .ai-title { font-weight: 600; font-size: 1.1rem; }
+        .ai-message {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: rgba(255,255,255,0.9);
+            min-height: 60px;
+            transition: var(--transition);
+        }
+        .ai-input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .ai-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--light);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+        .ai-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            background: rgba(255,255,255,0.15);
+        }
+        .ai-send {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .ai-send:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
+        }
+
+        /* 🔊 Звук */
+        .sound-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: var(--glass);
+            border: 2px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 200;
+            transition: var(--transition);
+            animation: fadeIn 1s ease both;
+        }
+        .sound-indicator:hover { transform: scale(1.1); border-color: var(--accent); }
+        .sound-indicator.muted::after { content: '🔇'; }
+        .sound-indicator:not(.muted)::after { content: '🔊'; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 📱 Адаптив */
+        @media (max-width: 768px) {
+            .logo { font-size: 3rem; }
+            header h1 { font-size: 2.2rem; }
+            .section { padding: 24px 20px; }
+            #ai-assistant { width: calc(100% - 40px); right: 20px; bottom: 20px; }
+            .download-grid { grid-template-columns: 1fr; }
+        }
+
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--darker); }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(var(--primary), var(--secondary));
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div class="sound-indicator" id="soundToggle" title="Вкл/Выкл звук"></div>
+
+<!-- 🔥 Прелоадер с высоким z-index -->
+<div id="preloader">
+    <div class="logo-container">
+        <div class="logo">System</div>
+        <div class="logo-subtitle">Загрузка платформы...</div>
+    </div>
+</div>
+
+<!-- 🔥 Волна с правильным z-index -->
+<div class="wave-transition" id="wave"></div>
+
+<!-- 📦 Контент с z-index выше волны -->
+<div id="main-content">
+    <header>
+        <h1>🌌 BlueBox</h1>
+        <p>
+            Приветствуем на платформе <strong>BlueBox</strong>!<br>
+            Здесь вы можете скачать все проекты от создателя: <em>Forgot night</em><br><br>
+            <a href="https://t.me/x001asm0x001" target="_blank">💬 Если есть вопросы — нажмите сюда</a>
+        </p>
+    </header>
+
+    <section class="section" id="earthdoom">
+        <h2>EarthDoom</h2>
+        <p>Одна из самых крутых песочниц на сайте! Проходите игру, стройте миры.<br><small>💡 Совет: используйте переводчик или знайте английский для лучшего опыта.</small></p>
+        <div class="download-grid">
+            <a href="https://drive.google.com/file/d/13ZwFRJTsWfIbh1kYaGutLxctbHf8qDxU/view?usp=sharing" class="download-btn">📥 EarthDoom 0.5</a>
+            <a href="https://drive.google.com/file/d/1IwgUShxm-6ZxrB602n9daxctYKpMCfBV/view?usp=sharing" class="download-btn">📥 EarthDoom 0.8</a>
+            <a href="https://drive.google.com/file/d/1_yaXkfK1Xh5aZYmf83HvpqSYqSI9_lig/view?usp=sharing" class="download-btn">📥 EarthDoom 1.0</a>
+            <a href="https://drive.google.com/file/d/1_fJ7Q3aqibw4G4iqGYENshUxewXJ3vgC/view?usp=sharing" class="download-btn">📥 EarthDoom 2.0 ✨</a>
+        </div>
+    </section>
+
+    <section class="section" id="rescandell">
+        <h2>RescandellOS</h2>
+        <p>"Эмулятор" — программа для вашего компьютера, имитирующая уникальную ОС.</p>
+        <div class="download-grid">
+            <a href="src/main" class="download-btn disabled" download>📥 RescandellOS 1.0</a>
+            <a href="https://example.com/rescandell-2.0.iso" class="download-btn disabled" download>📥 RescandellOS 2.0</a>
+            <a href="https://drive.google.com/file/d/16U6Ah4h_xM5pjCqCUZFkcg_Uw2grL_XR/view?usp=sharing" class="download-btn" download>📥 RescandellOS 2.1</a>
+            <a href="https://drive.google.com/file/d/1uud3nXkOO4rQM9QSa1YaVZri9I-KdPTs/view?usp=sharing" class="download-btn" download>📥 RescandellOS 3.0 version test alpha</a>
+            <a class="download-btn disabled">🔜 RescandellOS 4.0 <span class="badge">В разработке</span></a>
+
+        </div>
+    </section>
+
+    <center>
+        <p style="margin-top: 40px; opacity: 0.8; font-size: 0.95rem;">
+            @2026 Все права защищены<br>
+            <strong>команда: System🌠</strong>
+        </p>
+    </center>
+</div>
+
+<!-- 🤖 AI -->
+<div id="ai-assistant">
+    <div class="ai-header">
+        <div class="ai-avatar">S</div>
+        <div>
+            <div class="ai-title">AI • System Assistant</div>
+            <small style="opacity:0.7">Задайте вопрос о команде</small>
+        </div>
+    </div>
+    <div class="ai-message" id="aiResponse">
+        Привет! 👋 Я — AI-ассистент платформы BlueBox. Спросите меня: <em>"Что такое команда System?"</em>
+    </div>
+    <div class="ai-input-group">
+        <input type="text" class="ai-input" id="aiInput" placeholder="Ваш вопрос..." />
+        <button class="ai-send" id="aiSend">➤</button>
+    </div>
+</div>
+
+<audio id="appearSound" preload="auto">
+    <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2440.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+    // ✨ Звёзды
+    function createStars() {
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 120; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = star.style.height = Math.random() * 3 + 1 + 'px';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+            star.style.setProperty('--delay', (Math.random() * 5) + 's');
+            star.style.setProperty('--opacity', (Math.random() * 0.7 + 0.3).toFixed(2));
+            starsContainer.appendChild(star);
+        }
+    }
+    createStars();
+
+    // 🔊 Звук
+    const soundToggle = document.getElementById('soundToggle');
+    const appearSound = document.getElementById('appearSound');
+    let isMuted = false;
+
+    soundToggle.addEventListener('click', () => {
+        isMuted = !isMuted;
+        soundToggle.classList.toggle('muted', isMuted);
+        appearSound.muted = isMuted;
+        localStorage.setItem('bluebox_muted', isMuted);
+    });
+
+    if (localStorage.getItem('bluebox_muted') === 'true') {
+        isMuted = true;
+        soundToggle.classList.add('muted');
+        appearSound.muted = true;
+    }
+
+    // 🎬 ИСПРАВЛЕННАЯ логика загрузки
+    window.addEventListener('load', () => {
+        console.log('✅ Page loaded');
+
+        setTimeout(() => {
+            // Звук
+            if (!isMuted && !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                appearSound.volume = 0.4;
+                appearSound.play().catch(e => console.log('🔇 Audio blocked:', e));
+            }
+
+            // 1. Скрываем прелоадер
+            const preloader = document.getElementById('preloader');
+            preloader.classList.add('hidden');
+            console.log('🎬 Preloader hidden');
+
+            // 2. Запускаем волну
+            const wave = document.getElementById('wave');
+            setTimeout(() => {
+                wave.classList.add('active');
+                console.log('🌊 Wave started');
+            }, 200);
+
+            // 3. ПОКАЗЫВАЕМ контент СРАЗУ после начала волны (не ждём её окончания!)
+            const mainContent = document.getElementById('main-content');
+            setTimeout(() => {
+                mainContent.classList.add('visible');
+                console.log('✨ Main content visible');
+            }, 400); // 🔥 Ключевое: контент появляется ДО завершения волны
+
+            // 4. Показываем секции
+            document.querySelectorAll('.section').forEach((section, i) => {
+                setTimeout(() => {
+                    section.classList.add('visible');
+                    console.log(`📦 Section ${i+1} visible`);
+                }, 600 + i * 200);
+            });
+
+            // 5. AI ассистент
+            setTimeout(() => {
+                document.getElementById('ai-assistant').classList.add('visible');
+                console.log('🤖 AI assistant visible');
+            }, 1400);
+
+            // 6. 🔥 Скрываем волну полностью после анимации
+            setTimeout(() => {
+                wave.classList.add('done');
+                console.log('🌊 Wave hidden completely');
+            }, 1500);
+
+        }, 2000);
+    });
+
+    // 🤖 AI логика
+    const aiResponses = {
+        'команда system': '🌟 <strong>Команда System</strong> — это группа энтузиастов-разработчиков, создающих инновационные проекты: от игр-песочниц до эмуляторов ОС. Их философия: «Технологии должны вдохновлять». Все проекты на BlueBox — результат их творчества и открытого подхода к разработке.',
+        'кто такие system': '🌟 <strong>Команда System</strong> — это группа энтузиастов-разработчиков, создающих инновационные проекты: от игр-песочниц до эмуляторов ОС. Их философия: «Технологии должны вдохновлять». Все проекты на BlueBox — результат их творчества и открытого подхода к разработке.',
+        'что такое system': '🌟 <strong>Команда System</strong> — это группа энтузиастов-разработчиков, создающих инновационные проекты: от игр-песочниц до эмуляторов ОС. Их философия: «Технологии должны вдохновлять». Все проекты на BlueBox — результат их творчества и открытого подхода к разработке.',
+        'bluebox': '📦 <strong>BlueBox</strong> — это платформа для распространения проектов команды System. Здесь вы найдёте игры, утилиты и экспериментальные программы, созданные с душой и вниманием к деталям.',
+        'earthdoom': '🎮 <strong>EarthDoom</strong> — это песочница с элементами выживания и строительства. Исследуйте процедурно генерируемые миры, создавайте базы и развивайте технологии. Доступно несколько версий — от 0.5 до стабильной 2.0!',
+        'rescandell': '💻 <strong>RescandellOS</strong> — это эмулятор уникальной операционной системы с футуристичным интерфейсом. Идеально для тестирования, ностальгии или просто интересного опыта. Версия 4.0 уже в разработке!',
+        'default': '🤔 Интересный вопрос! Попробуйте спросить: <em>"Что такое команда System?"</em>, <em>"Расскажи про EarthDoom"</em> или <em>"Что за платформа BlueBox?"</em> — и я с радостью отвечу! ✨'
+    };
+
+    function getResponse(query) {
+        const q = query.toLowerCase().trim();
+        for (let key in aiResponses) {
+            if (q.includes(key)) return aiResponses[key];
+        }
+        return aiResponses['default'];
+    }
+
+    const aiInput = document.getElementById('aiInput');
+    const aiSend = document.getElementById('aiSend');
+    const aiResponse = document.getElementById('aiResponse');
+
+    function askAI() {
+        const question = aiInput.value.trim();
+        if (!question) return;
+        aiResponse.style.opacity = '0.7';
+        aiResponse.innerHTML = '<em>Думаю...</em> 🤖';
+        setTimeout(() => {
+            aiResponse.style.opacity = '1';
+            aiResponse.innerHTML = getResponse(question);
+        }, 800);
+        aiInput.value = '';
+    }
+
+    aiSend.addEventListener('click', askAI);
+    aiInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') askAI(); });
+
+    // 🎯 Scroll observer
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.section').forEach(section => observer.observe(section));
+
+    // ✨ Hover-эффекты
+    document.querySelectorAll('.download-btn:not(.disabled)').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            this.style.transition = 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        });
+    });
+
+    console.log('%c🌌 BlueBox loaded with love by System Team', 'color: #6c5ce7; font-weight: bold; font-size: 14px;');
+</script>
+</body>
+</html>
